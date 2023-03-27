@@ -111,7 +111,7 @@ func cli(cmd *cobra.Command, args []string) {
 				continue
 			}
 
-			printTable(table, isNamespaced)
+			printTable(table, &gvr, isNamespaced)
 		}
 	}
 }
@@ -167,7 +167,7 @@ func checkIfNamespaced(table *v1.Table) bool {
 	return false
 }
 
-func printTable(table *v1.Table, isNamespaced bool) {
+func printTable(table *v1.Table, gvr *schema.GroupVersionResource, isNamespaced bool) {
 	b := bytes.NewBufferString("")
 	tabw := tabwriter.NewWriter(b, 0, 8, 0, '\t', 0)
 
@@ -194,8 +194,12 @@ func printTable(table *v1.Table, isNamespaced bool) {
 
 		for i, cellValue := range tableItem.Cells {
 			if table.ColumnDefinitions[i].Priority == 0 {
+				if strings.ToLower(table.ColumnDefinitions[i].Name) == "name" {
+					cellValues += fmt.Sprintf("%s/%v\t", gvr.Resource, cellValue)
+				} else {
+					cellValues += fmt.Sprintf("%v\t", cellValue)
+				}
 				// cellValues = append(cellValues, fmt.Sprintf("[%s : %v]", table.ColumnDefinitions[i].Name, cellValue))
-				cellValues += fmt.Sprintf("%v\t", cellValue)
 			}
 		}
 		_, _ = fmt.Fprintln(tabw, cellValues)
