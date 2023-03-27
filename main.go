@@ -195,7 +195,7 @@ func printTable(table *v1.Table, gvr *schema.GroupVersionResource, isNamespaced 
 		for i, cellValue := range tableItem.Cells {
 			if table.ColumnDefinitions[i].Priority == 0 {
 				if strings.ToLower(table.ColumnDefinitions[i].Name) == "name" {
-					cellValues += fmt.Sprintf("%s/%v\t", gvr.Resource, cellValue)
+					cellValues += fmt.Sprintf("%s/%v\t", optionallyTranslateToSingular(gvr.Resource), cellValue)
 				} else {
 					cellValues += fmt.Sprintf("%v\t", cellValue)
 				}
@@ -208,4 +208,13 @@ func printTable(table *v1.Table, gvr *schema.GroupVersionResource, isNamespaced 
 	_ = tabw.Flush()
 	tstr := b.String()
 	fmt.Println(tstr)
+}
+
+func optionallyTranslateToSingular(in string) string {
+	last := in[len(in)-1]
+	if last == 's' {
+		return in[0 : len(in)-1]
+	}
+
+	return in
 }
