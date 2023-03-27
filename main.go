@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/spf13/cobra"
+	"io"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,7 +19,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+	"k8s.io/klog/v2"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
@@ -32,6 +35,7 @@ var (
 		Long: "kubectl-really-get-all",
 		Run:  cli,
 	}
+	out = bytes.NewBufferString("")
 )
 
 type TableRoundtripper struct {
@@ -64,6 +68,11 @@ func main() {
 }
 
 func cli(cmd *cobra.Command, args []string) {
+	klog.SetOutput(io.Discard)
+	flags := &flag.FlagSet{}
+	klog.InitFlags(flags)
+	flags.Set("logtostderr", "false")
+
 	client, clientset, err := buildClients()
 	if err != nil {
 		_ = fmt.Errorf("%s", err.Error())
@@ -114,6 +123,7 @@ func cli(cmd *cobra.Command, args []string) {
 			printTable(table, &gvr, isNamespaced)
 		}
 	}
+	_, _ = fmt.Fprint(os.Stdout, out.String())
 }
 
 func buildClients() (*dynamic.DynamicClient, *kubernetes.Clientset, error) {
@@ -168,8 +178,8 @@ func checkIfNamespaced(table *v1.Table) bool {
 }
 
 func printTable(table *v1.Table, gvr *schema.GroupVersionResource, isNamespaced bool) {
-	b := bytes.NewBufferString("")
-	tabw := tabwriter.NewWriter(b, 0, 8, 0, '\t', 0)
+	//b := bytes.NewBufferString("")
+	tabw := tabwriter.NewWriter(out, 8, 8, 2, '\t', 0)
 
 	headerValues := ""
 	if isNamespaced {
@@ -206,8 +216,9 @@ func printTable(table *v1.Table, gvr *schema.GroupVersionResource, isNamespaced 
 	}
 
 	_ = tabw.Flush()
-	tstr := b.String()
-	fmt.Println(tstr)
+	_, _ = fmt.Fprintln(out)
+	//tstr := b.String()
+	//fmt.Println(tstr)
 }
 
 func optionallyTranslateToSingular(in string) string {
