@@ -2,7 +2,17 @@
 
 Install instructions:
 
-```$ go install github.com/vfx1b/kubectl-really-get-all```
+```
+$ git clone https://github.com/vfx1b/kubectl-really-get-all.git
+
+$ cd kubectl-really-get-all
+$ go install
+```
+or
+```
+make install
+```
+
 
 Sample command:
 
