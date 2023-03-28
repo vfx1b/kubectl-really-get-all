@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"io"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,7 +21,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,20 +40,8 @@ var (
 	out = bytes.NewBufferString("")
 )
 
-type TableRoundtripper struct {
-	http.RoundTripper
-
-	wrapRoundTripper http.RoundTripper
-}
-
-func (t *TableRoundtripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("Accept", "application/json;as=Table;g=meta.k8s.io;v=v1")
-
-	return t.wrapRoundTripper.RoundTrip(req)
-}
-
 func init() {
-	cmd.Flags().StringVarP(&namespace, "Namespace", "n", v1.NamespaceDefault, "")
+	cmd.Flags().StringVarP(&namespace, "Namespace", "n", metav1.NamespaceDefault, "")
 	cmd.Flags().BoolVarP(&all, "All", "A", false, "")
 
 	if home := homedir.HomeDir(); home != "" {
@@ -109,14 +97,14 @@ func cli(cmd *cobra.Command, args []string) {
 			gvr := schema.GroupVersionResource{Group: group, Version: version, Resource: apiResources.Name}
 			var list *unstructured.UnstructuredList
 			if all {
-				list, err = client.Resource(gvr).Namespace(v1.NamespaceAll).List(context.Background(), v1.ListOptions{})
+				list, err = client.Resource(gvr).Namespace(corev1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 			} else {
-				list, err = client.Resource(gvr).Namespace(namespace).List(context.Background(), v1.ListOptions{})
+				list, err = client.Resource(gvr).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
 			}
 			if err != nil {
 				continue
 			}
-			table := &v1.Table{}
+			table := &metav1.Table{}
 			err = runtime.DefaultUnstructuredConverter.FromUnstructured(list.Object, table)
 			if err != nil {
 				panic(err)
@@ -147,7 +135,7 @@ func buildClients() (*dynamic.DynamicClient, *kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, nil, errors.New("error creating kubernetes client")
 	}
-	dynamicClient.Transport = &TableRoundtripper{wrapRoundTripper: restTransport}
+	dynamicClient.Transport = &ProxyTransport{ProxiedTransport: restTransport}
 	client, err := dynamic.NewForConfigAndClient(config, dynamicClient)
 	if err != nil {
 		return nil, nil, errors.New("error creating kubernetes client")
@@ -175,7 +163,7 @@ func getNamespaceFromRawExtension(raw *runtime.RawExtension) *string {
 	return &v
 }
 
-func checkIfNamespaced(table *v1.Table) bool {
+func checkIfNamespaced(table *metav1.Table) bool {
 	if len(table.Rows) < 0 {
 		first := table.Rows[0]
 
@@ -185,7 +173,7 @@ func checkIfNamespaced(table *v1.Table) bool {
 	return false
 }
 
-func printTable(table *v1.Table, gvr *schema.GroupVersionResource, isNamespaced bool) {
+func printTable(table *metav1.Table, gvr *schema.GroupVersionResource, isNamespaced bool) {
 	//b := bytes.NewBufferString("")
 	tabw := tabwriter.NewWriter(out, 8, 8, 2, '\t', 0)
 
