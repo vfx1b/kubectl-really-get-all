@@ -30,7 +30,9 @@ import (
 var (
 	kubeconfig *string
 	namespace  string
-	cmd        = &cobra.Command{
+	all        bool
+
+	cmd = &cobra.Command{
 		Use:  "kubectl-really-get-all",
 		Long: "kubectl-really-get-all",
 		Run:  cli,
@@ -52,6 +54,7 @@ func (t *TableRoundtripper) RoundTrip(req *http.Request) (*http.Response, error)
 
 func init() {
 	cmd.Flags().StringVarP(&namespace, "Namespace", "n", v1.NamespaceDefault, "")
+	cmd.Flags().BoolVarP(&all, "All", "A", false, "")
 
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -104,7 +107,12 @@ func cli(cmd *cobra.Command, args []string) {
 				continue
 			}
 			gvr := schema.GroupVersionResource{Group: group, Version: version, Resource: apiResources.Name}
-			list, err := client.Resource(gvr).Namespace(namespace).List(context.Background(), v1.ListOptions{})
+			var list *unstructured.UnstructuredList
+			if all {
+				list, err = client.Resource(gvr).Namespace(v1.NamespaceAll).List(context.Background(), v1.ListOptions{})
+			} else {
+				list, err = client.Resource(gvr).Namespace(namespace).List(context.Background(), v1.ListOptions{})
+			}
 			if err != nil {
 				continue
 			}
