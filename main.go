@@ -51,7 +51,7 @@ func (t *TableRoundtripper) RoundTrip(req *http.Request) (*http.Response, error)
 }
 
 func init() {
-	cmd.Flags().StringVarP(&namespace, "Namespace", "n", "", "")
+	cmd.Flags().StringVarP(&namespace, "Namespace", "n", v1.NamespaceDefault, "")
 
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
