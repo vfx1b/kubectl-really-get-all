@@ -6,8 +6,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"text/tabwriter"
+
+	"vfx1b/kubectl-really-get-all/pkg/utils"
+
+	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -21,10 +28,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
-	"os"
-	"path/filepath"
-	"strings"
-	"text/tabwriter"
 )
 
 var (
@@ -135,7 +138,7 @@ func buildClients() (*dynamic.DynamicClient, *kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, nil, errors.New("error creating kubernetes client")
 	}
-	dynamicClient.Transport = &ProxyTransport{ProxiedTransport: restTransport}
+	dynamicClient.Transport = &utils.ProxyTransport{ProxiedTransport: restTransport}
 	client, err := dynamic.NewForConfigAndClient(config, dynamicClient)
 	if err != nil {
 		return nil, nil, errors.New("error creating kubernetes client")
